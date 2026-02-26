@@ -1,0 +1,106 @@
+const express = require("express");
+
+const requestRouter = express.Router();
+
+const { userAuth } = require("../middleware/auth");
+
+const ConnectionRequest = require("../models/connectionRequest");
+
+const User = require("../models/user");
+
+requestRouter.post(
+  "/request/send/:status/:toUserId",
+  userAuth,
+  async (req, res) => {
+    try {
+      const fromUserId = req.user._id;
+      const toUserId = req.params.toUserId;
+      const status = req.params.status;
+
+      const allowedStatus = ["ignored", "interested"];
+      if (!allowedStatus.includes(status)) {
+        return res.status(400).json({
+          message: "Invalid Status type : " + status,
+        });
+      }
+
+      const toUser = await User.findById(toUserId);
+      if (!toUser) {
+        return res.status(400).json({
+          message: "User not found",
+        });
+      }
+
+      const existingConnectionRequest = await ConnectionRequest.findOne({
+        $or: [
+          {
+            fromUserId,
+            toUserId,
+          },
+          {
+            fromUserId: toUserId,
+            toUserId: fromUserId,
+          },
+        ],
+      });
+      if (existingConnectionRequest) {
+        return res.status(400).send({
+          message: "Connection Request Already Exists!!",
+        });
+      }
+
+      const connectionRequest = new ConnectionRequest({
+        fromUserId,
+        toUserId,
+        status,
+      });
+      const data = await connectionRequest.save();
+
+      // const emailRes = await sendEmail.run("A new friend request form "+req.user.firstName, req.user.firstName + " is " + status + " in " + toUser.firstName);
+
+      // console.log(emailRes);
+
+      res.json({
+        message:
+          req.user.firstName + " is " + status + (status === "interested")
+            ? " in "
+            : "" + toUser.firstName,
+        data,
+      });
+    } catch (err) {
+      res.status(400).send("ERROR: " + err.message);
+    }
+  }
+);
+
+requestRouter.post("/request/review/:status/:requestId",userAuth,async (req,res)=>{
+  try{
+    const LoggedInUser = req.user;
+    const status = req.params.status;
+    if(!["accepted","rejected"].includes(status)){
+      return res.status(400).json({message:"Invalid status"});
+    }
+    const requestId = req.params.requestId;
+
+    const connectionRequest = await ConnectionRequest.findOne({
+      _id: requestId,
+      toUserId: LoggedInUser._id,
+      status: "interested",
+    });
+
+    if(!connectionRequest){
+      return res.status(400).json({message:"Connection request not found"});
+    }
+
+    connectionRequest.status = status;
+    const data = await connectionRequest.save();
+
+    res.json({message:"Connection request "+status, data});
+
+  }catch(err){
+    res.status(400).send("ERROR: "+err.message);
+  }
+  
+});
+
+module.exports = requestRouter;

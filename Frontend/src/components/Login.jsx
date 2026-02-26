@@ -8,49 +8,44 @@ import { BASE_URL } from "../utils/constants";
 const Login = () => {
   const [emailId, setEmailId] = useState("");
   const [password, setPassword] = useState("");
-
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isLoginForm, setIsLoginForm] = useState(true);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((store) => store.user);
-  useEffect(() => {
-  if (user&&isLoginForm) {
-    navigate("/");
-  }
-}, [user, navigate]);
 
-  //this function will make an api call to login
-  //because we are maing an api call we will be using a promis over there make your function async
-  //To MAKE AN API CALL WE WILL USE A NPM PACKAGE KNOWN AS AXIOS
-  //WE CAN ALSO USE BASIC FETCH (in namaste react used)
-  //at the end of the day everything is same it is just a wrapper use whatever library you want
-  //WRAPPER AROUND XHR WAY OF MAKING A API REQUEST
+  useEffect(() => {
+    if (user && isLoginForm) {
+      navigate("/");
+    }
+  }, [user, navigate, isLoginForm]);
+
   const handleLogin = async () => {
-    //syntax axios.(get/post/etc)
-    //axios.post("url",{data})
+    setError("");
+    setIsLoading(true);
     try {
       const res = await axios.post(
         BASE_URL + "/login",
-        {
-          emailId,
-          password,
-        },
+        { emailId, password },
         { withCredentials: true }
       );
-      // console.log(res.data);
       dispatch(addUser(res.data));
-      return navigate("/");
+      navigate("/");
     } catch (err) {
       setError(err?.response?.data || "Something went wrong");
-      //always use optional chaining when you do like this
       console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSignUp = async () => {
+    setError("");
+    setIsLoading(true);
     try {
       const res = await axios.post(
         BASE_URL + "/signup",
@@ -58,80 +53,175 @@ const Login = () => {
         { withCredentials: true }
       );
       dispatch(addUser(res.data.data));
-      return navigate("/profile");
+      navigate("/profile");
     } catch (err) {
       setError(err?.response?.data || "Something went wrong");
       console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
-  return (
-    <div className="flex justify-center my-10">
-      <div className="card bg-base-300 w-96 shadow-sm">
-        <div className="card-body">
-          <h2 className="card-title justify-center">
-            {isLoginForm ? "Login" : "SignUp"}
-          </h2>
 
-          <div>
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    isLoginForm ? handleLogin() : handleSignUp();
+  };
+
+  return (
+    <div className="min-h-screen flex items-start justify-center bg-gradient-to-br from-base-200 to-base-300 px-4 pt-4">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-4">
+          <h1 className="text-4xl font-bold text-primary mb-2">
+            {isLoginForm ? "Welcome Back" : "Join Dev-Tinder"}
+          </h1>
+          <p className="text-base-content/70">
+            {isLoginForm
+              ? "Connect with developers worldwide"
+              : "Start your developer networking journey"}
+          </p>
+        </div>
+
+        {/* Form Card */}
+        <div className="bg-base-100 rounded-2xl shadow-xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Name Fields - Only for Signup */}
             {!isLoginForm && (
-              <>
-                <fieldset className="fieldset my-2">
-                  <legend className="fieldset-legend">First Name</legend>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">First Name</span>
+                  </label>
                   <input
                     type="text"
                     value={firstName}
-                    className="input"
                     onChange={(e) => setFirstName(e.target.value)}
+                    className="input input-bordered w-full focus:input-primary transition-all"
+                    placeholder="John"
+                    required
                   />
-                </fieldset>
-                <fieldset className="fieldset my-2">
-                  <legend className="fieldset-legend">Last Name</legend>
+                </div>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Last Name</span>
+                  </label>
                   <input
                     type="text"
                     value={lastName}
-                    className="input"
                     onChange={(e) => setLastName(e.target.value)}
+                    className="input input-bordered w-full focus:input-primary transition-all"
+                    placeholder="Doe"
+                    required
                   />
-                </fieldset>
-              </>
+                </div>
+              </div>
             )}
-            <fieldset className="fieldset my-2">
-              <legend className="fieldset-legend">Email ID</legend>
+
+            {/* Email Field */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Email Address</span>
+              </label>
               <input
-                type="text"
+                type="email"
                 value={emailId}
-                className="input"
                 onChange={(e) => setEmailId(e.target.value)}
+                className="input input-bordered w-full focus:input-primary transition-all"
+                placeholder="you@example.com"
+                required
               />
-            </fieldset>
-            <fieldset className="fieldset my-2">
-              <legend className="fieldset-legend">Password </legend>
+            </div>
+
+            {/* Password Field */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Password</span>
+              </label>
               <input
                 type="password"
                 value={password}
-                className="input"
                 onChange={(e) => setPassword(e.target.value)}
+                className="input input-bordered w-full focus:input-primary transition-all"
+                placeholder="••••••••"
+                required
               />
-            </fieldset>
-          </div>
+              {isLoginForm && (
+                <label className="label">
+                  <span className="label-text-alt link link-hover text-primary">
+                    Forgot password?
+                  </span>
+                </label>
+              )}
+            </div>
 
-          <p className="text-red-500">{error}</p>
+            {/* Error Message */}
+            {error && (
+              <div className="alert alert-error shadow-lg">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="stroke-current shrink-0 h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
 
-          <div className="card-actions justify-center my-2">
+            {/* Submit Button */}
             <button
-              className="btn btn-primary"
-              onClick={isLoginForm ? handleLogin : handleSignUp}
+              type="submit"
+              className={`btn btn-primary w-full text-lg ${isLoading ? "loading" : ""}`}
+              disabled={isLoading}
             >
-              {isLoginForm ? "Login" : "Sign Up"}
+              {isLoading ? (
+                <span className="loading loading-spinner"></span>
+              ) : isLoginForm ? (
+                "Sign In"
+              ) : (
+                "Create Account"
+              )}
             </button>
+          </form>
+
+          {/* Divider */}
+          <div className="divider my-6">OR</div>
+
+          {/* Toggle Form */}
+          <div className="text-center">
+            <p className="text-base-content/70">
+              {isLoginForm ? "Don't have an account?" : "Already have an account?"}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLoginForm((value) => !value);
+                  setError("");
+                }}
+                className="link link-primary font-semibold ml-2"
+              >
+                {isLoginForm ? "Sign Up" : "Sign In"}
+              </button>
+            </p>
           </div>
-          <p
-            className="m-auto cursor-pointer py-2"
-            onClick={() => setIsLoginForm((value) => !value)}
-          >
-            {isLoginForm
-              ? "New User? Signup here"
-              : "Existing User? Login Here"}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-6 text-sm text-base-content/60">
+          <p>
+            By continuing, you agree to our{" "}
+            <a href="#" className="link link-hover">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="#" className="link link-hover">
+              Privacy Policy
+            </a>
           </p>
         </div>
       </div>
